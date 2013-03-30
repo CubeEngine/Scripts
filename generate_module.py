@@ -11,9 +11,9 @@ def which(program):
             return os.path.join(path, program)
     return None
 
-archetypeGroupId = "de.cubeisland.maven"
-archetypeArtifactId = "cubeengine-module"
-archetypeVersion = "1.0.0-SNAPSHOT"
+archetypeGroupId = "de.cubeisland.maven.archetypes"
+archetypeArtifactId = "archetype-cubeengine-module"
+archetypeRepository = "http://repo.cubeisland.de/"
 
 defaultCoreVersion = "1.0.0-SNAPSHOT"
 
@@ -51,14 +51,15 @@ commandLine = [
     "archetype:generate",
     "-DarchetypeGroupId=%s" % archetypeGroupId,
     "-DarchetypeArtifactId=%s" % archetypeArtifactId,
-    "-DarchetypeVersion=%s" % archetypeVersion,
+    "-DarchetypeRepository=%s" % archetypeRepository,
     "-DgroupId=%s" % groupId,
     "-DartifactId=%s" % artifactId,
     "-Dversion=%s" % coreVersion,
     "-Dpackage=%s.%s" % (groupId, artifactId),
     "-Ddefault-class=%s" % (artifactId[0].upper() + artifactId[1:]),
     "-Dname=%s" % moduleName,
-    "-Ddescription=%s" % description
+    "-Ddescription=%s" % description,
+    "-DinteractiveMode=false"
 ]
 
 #print(commandLine)
