@@ -13,6 +13,7 @@ def which(program):
 
 archetypeGroupId = "de.cubeisland.maven.archetypes"
 archetypeArtifactId = "archetype-cubeengine-module"
+archetypeVersion = "1.0.0"
 archetypeRepository = "http://repo.cubeisland.de/"
 
 defaultCoreVersion = "1.0.0-SNAPSHOT"
@@ -46,11 +47,16 @@ if os.pathsep == ";":
 
 maven = which(maven)
 
+if maven == None:
+    print("I couldn't find maven in your path!")
+    exit(1)
+
 commandLine = [
     maven,
     "archetype:generate",
     "-DarchetypeGroupId=%s" % archetypeGroupId,
     "-DarchetypeArtifactId=%s" % archetypeArtifactId,
+    "-DarchetypeVersion=%s" % archetypeVersion,
     "-DarchetypeRepository=%s" % archetypeRepository,
     "-DgroupId=%s" % groupId,
     "-DartifactId=%s" % artifactId,
@@ -62,7 +68,12 @@ commandLine = [
     "-DinteractiveMode=false"
 ]
 
-#print(commandLine)
-#sleep(5)
+result = call(commandLine)
 
-call(commandLine)
+if result != 0:
+    print("It seems maven failed to generate the module...")
+    print("Look at the output and press enter when you're done.")
+    input()
+    exit(1)
+    
+
