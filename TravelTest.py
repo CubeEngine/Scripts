@@ -27,8 +27,8 @@ try:
     print "Done creating users"
     print "Creating Homes and Warps"
     for x in range(TELEPORTPOINTS):
-        conn.query("INSERT IGNORE INTO cube_teleportpoints (owner, type, visibility, world, x, y, z, yaw, pitch, name) VALUES (%i, %i, %i, 1, %i, %i, %i, 0, 45, '%s')" %
-            (random.randint(1,USERS), random.randint(0,1), random.randint(0,1), random.randint(-10000,10000), random.randint(-10000,10000), random.randint(-10000,10000), name_generator()))
+        conn.query("INSERT IGNORE INTO cube_teleportpoints (owner, type, visibility, world, x, y, z, yaw, pitch, name, permission) VALUES (%i, %i, %i, 1, %i, %i, %i, 0, 45, '%s', %i)" %
+            (random.randint(1,USERS), random.randint(0,1), random.randint(0,1), random.randint(-10000,10000), random.randint(-10000,10000), random.randint(-10000,10000), name_generator(), random.randint(0,1)))
         message = "%i of %i" % (x, TELEPORTPOINTS)
         sys.stdout.write(message)
         sys.stdout.write("\b" * len(message))
