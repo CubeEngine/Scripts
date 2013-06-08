@@ -13,7 +13,7 @@ def which(program):
 
 archetypeGroupId = "de.cubeisland.maven.archetypes"
 archetypeArtifactId = "archetype-cubeengine-module"
-archetypeVersion = "1.0.0"
+archetypeVersion = "1.0.1"
 archetypeRepository = "http://repo.cubeisland.de/"
 
 defaultCoreVersion = "1.0.0-SNAPSHOT"
@@ -38,7 +38,7 @@ else:
     if not len(coreVersion):
         coreVersion = defaultCoreVersion
 
-groupId = "de.cubeisland.cubeengine"
+groupId = "de.cubeisland.engine"
 artifactId = re.sub(r'[^a-z]', '', moduleName.lower());
 
 maven = "mvn";
@@ -71,7 +71,7 @@ commandLine = [
 result = call(commandLine)
 
 if result != 0:
-    print("It seems maven failed to generate the module...")
+    print("It seems like maven failed to generate the module...")
     print("Look at the output and press enter when you're done.")
     input()
     exit(1)
