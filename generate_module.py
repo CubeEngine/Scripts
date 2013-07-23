@@ -38,7 +38,7 @@ else:
     if not len(coreVersion):
         coreVersion = defaultCoreVersion
 
-groupId = "de.cubeisland.cubeengine"
+groupId = "de.cubeisland.engine"
 artifactId = re.sub(r'[^a-z]', '', moduleName.lower());
 
 maven = "mvn";
