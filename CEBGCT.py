@@ -2,11 +2,6 @@ import os, os.path
 import pymysql as mysql
 import sqlite3 as sqlite
 
-class DatabaseException(Exception):
-    pass
-class ConversionException(Exception):
-    pass
-    
 class Plugin(object):
     ''' A class to represent a plugin which can be converted to CE Protect with this tool
     '''
@@ -43,7 +38,8 @@ class LWC(Plugin):
         return set() # TODO
     
 def is_ce_present():
-    return True
+    return os.path.exists('./CubeEngine/') and os.path.exists('./CubeEngine/database.yml') \
+            and os.path.isfile('./CubeEngine/database.yml')
     
 def check_workspace():
     print('==> Checking workspace')
@@ -57,9 +53,18 @@ def check_workspace():
 
 def get_ce_db_info():
     print('==> Gathering database connection info for CubeEngine')
-    print('    ==>', end='')
-    # TODO
-    print('OK')
+    print('    ==> ', end='')
+    global db_hostname, db_port, db_name, db_user, db_pass, db_tableprefix
+    config = yaml.load(open('./CubeEngine/database.yml').read())
+    print('Found connection info')
+    print('    ==> ', end='')
+    global conn
+    conn = mysql.connect(host=config['host'], port=config['port'], user=config['user'], passwd=config['password'], db=config['database'])
+    cur = conn.cursor()
+    cur.execute('SHOW TABLES')
+    cur.close()
+    print('Connected')
+    print('    ==> OK')
 
 def get_available_plugins(plugins):
     print('==> Finding other protection plugins')
@@ -75,7 +80,7 @@ def get_available_plugins(plugins):
         exit(1)
     return available_plugins
 
-def get_db_info_plugins(available_plugins):
+def get_db_connections_plugins(available_plugins):
     print('==> Gathering database connection info from plugins')
     connections = dict()
     for plugin in available_plugins:
@@ -91,6 +96,7 @@ def get_db_info_plugins(available_plugins):
             print('        ==> FAIL')
             raise ex
             exit(2)
+    return connections
             
 def get_protections(connections):
     print('==> Copying Protections into memory from the databases')
@@ -121,8 +127,8 @@ the conversions from them to BaumGuard.''');
     check_workspace()
     get_ce_db_info()
     available_plugins = get_available_plugins(plugins)
-    database_connections = get_db_info_plugins(available_plugins)
-    protections = get_protections(connections)
+    database_connections = get_db_connections_plugins(available_plugins)
+    protections = get_protections(database_connections)
     insert_protections(protections)
     
     print('==> DONE')
