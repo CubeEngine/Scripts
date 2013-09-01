@@ -28,7 +28,9 @@ sql_expressions = {
                        ,created)
            VALUES      ((SELECT `key`
                          FROM   `{prefix}user`
-                         WHERE  `player`= '{a}')
+                         WHERE  `player`= '{a}'
+                         ORDER BY `key` ASC
+                         LIMIT 1)
                        ,{b}
                        ,{c}
                        ,'{d}'
@@ -47,7 +49,9 @@ sql_expressions = {
                        ,lock_id)
            VALUES      ((SELECT `key`
                          FROM   `{prefix}worlds`
-                         WHERE  `worldName`= '{a}')
+                         WHERE  `worldName`= '{a}'
+                         ORDER BY `key` ASC
+                         LIMIT 1)
                        ,{x}
                        ,{y}
                        ,{z}
@@ -62,9 +66,22 @@ sql_expressions = {
                        ,level)
            VALUES      ((SELECT `key`
                          FROM   `{prefix}user`
-                         WHERE  `player`= '{a}')
+                         WHERE  `player`= '{a}'
+                         ORDER BY `key` ASC
+                         LIMIT 1)
                        ,{b}
                        ,{c})
+        ''',
+    'find_without_location':
+        '''SELECT {prefix}locks.id
+           FROM   {prefix}locks
+                  LEFT OUTER JOIN {prefix}locklocation
+                               ON {prefix}locks.id = {prefix}locklocation.lock_id
+           WHERE  {prefix}locklocation.id IS null
+        ''',
+    'delete_lock':
+        '''DELETE FROM {prefix}locks
+           WHERE  id={a}
         '''}
 
 # Classes:
@@ -181,7 +198,7 @@ class LWC(Plugin):
         if self.adapter == 'sqlite':
             conn = sqlite.connect(self.path)
             cur = conn.cursor()
-            cur.execute(LWC.sql_expressions['get-tables_sqlite'])
+            cur.execute(LWC.sql_expressions['get_tables_sqlite'])
             rows = cur.fetchall()
             if ('{}protections'.format(self.prefix),) not in rows:
                 raise Exception("LWC's database does not contain the protections table!")
@@ -336,18 +353,24 @@ def insert_protections(protections):
     print('==> Copying protections to Locker')
     print('    ==> ', end='')
     cur = conn.cursor()
+    missing = 0
+    # Insert the protections
     for protection in protections:
+        if "'" in protection.owner:
+            continue
         try:
-            cur.execute(sql_expressions['insert_lock']\
+            sql = sql_expressions['insert_lock']\
                             .format(a=protection.owner, 
                                     b=protection.protected_type,
                                     c=protection.protection_type,
                                     d=protection.password,
                                     e=protection.drop_transfer,
                                     f="2013-01-01 00:00:00",
-                                    prefix=db_tableprefix))
+                                    prefix=db_tableprefix)
+            cur.execute(sql)
             rowid = cur.lastrowid
-            cur.execute(sql_expressions['insert_locklocation']\
+            
+            sql = sql_expressions['insert_locklocation']\
                             .format(a=protection.world,
                                     x=protection.x,
                                     y=protection.y,
@@ -355,18 +378,43 @@ def insert_protections(protections):
                                     cx=math.floor(protection.x/16),
                                     cz=math.floor(protection.z/16),
                                     b=rowid,
-                                    prefix=db_tableprefix))
+                                    prefix=db_tableprefix)
+            cur.execute(sql)
+            
             for user, access in protection.invited_users.items():
-                cur.execute(sql_expressions['insert_lockaccesslist']\
+                if "'" in user:
+                    continue
+                sql = sql_expressions['insert_lockaccesslist']\
                                 .format(a=user,
                                         b=rowid,
                                         c=access,
-                                        prefix=db_tableprefix))
+                                        prefix=db_tableprefix)
+                cur.execute(sql)
+        except mysql.InternalError as ex:
+            if "Column \'user_id\' cannot be null" in str(ex) or\
+                    "Column \'owner_id\' cannot be null" in str(ex) or\
+                    "Column \'world_id\' cannot be null" in str(ex):
+                missing += 1
+            else:
+                print('Failed to insert a home: {}'.format(repr(ex)))
+                print('    ==> ', end='')
         except Exception as ex:
-            print('Failed to insert a home: {}'.format(repr(ex)))
-            print('    ==> ', end='')
+            if type(ex) == mysql.IntegrityError and "Duplicate entry" in str(ex):
+                pass
+            else:
+                print('ERROR!')
+                raise(ex)
+    # Remove protections that doesn't have a location
+    cur.execute(sql_expressions['find_without_location']\
+                    .format(prefix=db_tableprefix))
+    for (key,) in cur.fetchall():
+        cur.execute(sql_expressions['delete_lock']\
+                    .format(prefix=db_tableprefix, a=key))
+        
     cur.close()
-    print('DONE')
+    print(("DONE - {} protections converted. {} failed because the user or"
+        + " world wasn't in the database").format(str(len(protections)-missing), 
+                                                 str(missing)))
     
 def main():
     plugins = {'LWC': LWC()}
@@ -384,17 +432,22 @@ def main():
     database_connections = get_db_connections_plugins(available_plugins)
     protections = get_protections(database_connections)
     insert_protections(protections)
-    input('Ready to commit changes to database. Press enter to continue'
-        + ', or Ctrl-C to abort')
+    try:
+        input('Ready to commit changes to database. Press enter to continue'
+            + ', or Ctrl-D to abort')
+    except EOFError:
+        print()
+        return
+    print()
+    print('==> Committing changes to databases')
+    print('    ==> ', end='')
     for connection in database_connections.values():
         connection.commit()
         connection.close()
     conn.commit()
     conn.close()
-    
+    print('DONE')
     print('==> DONE')
-    print('    ==> Converted {} protections'.format(len(protections)))
-    
         
 if __name__ == "__main__":
 	main()
