@@ -9,7 +9,7 @@ import json, yaml
 import string, random
 
 # Dictionaries that maps from LWC's protection types to Locker's
-lwc_to_locker_protectables = {54:1, 61:1, 62:1, 23:1, 64:2, 71:2, 96:2, 107:2, 0:3}
+lwc_to_locker_protectables = {23:1, 54:1, 61:1, 62:1, 23:1, 64:2, 71:2, 96:2, 107:2, 117:1, 146:1, 154:1, 158:1, 0:3}
 lwc_to_locker_types = {0:2, 1:1, 2:1}
 
 # SQL expressions for CubeEngine
@@ -23,7 +23,6 @@ sql_expressions = {
                        ,type
                        ,lock_type
                        ,password
-                       ,droptransfer
                        ,last_access
                        ,created)
            VALUES      ((SELECT `key`
@@ -34,7 +33,6 @@ sql_expressions = {
                        ,{b}
                        ,{c}
                        ,'{d}'
-                       ,{e}
                        ,'{f}'
                        ,'{f}')
         ''',
@@ -96,7 +94,6 @@ class Protection(object):
         self.z = 0
         self.world = 'world'
         self.owner = 'user'
-        self.drop_transfer = 0
         self.password = ''
         self.protected_type = 0
         self.protection_type = 0
@@ -364,7 +361,6 @@ def insert_protections(protections):
                                     b=protection.protected_type,
                                     c=protection.protection_type,
                                     d=protection.password,
-                                    e=protection.drop_transfer,
                                     f="2013-01-01 00:00:00",
                                     prefix=db_tableprefix)
             cur.execute(sql)
