@@ -14,10 +14,13 @@ archetypeGroupId = "de.cubeisland.maven.archetypes"
 archetypeArtifactId = "archetype-cubeengine-module"
 archetypeVersion = "1.0.2"
 
-if os.environ['ARCHETYPE_VERSION']:
+if 'ARCHETYPE_VERSION' in os.environ:
 	archetypeVersion = os.environ['ARCHETYPE_VERSION']
 
-defaultCoreVersion = "1.0.0-SNAPSHOT"
+coreVersion = "1.0.0-SNAPSHOT"
+
+if 'CORE_VERSION' in os.environ:
+        coreVersion = os.environ['CORE_VERSION']
 
 moduleName = ""
 if len(argv) > 1:
@@ -30,14 +33,6 @@ if len(argv) > 2:
 	description = argv[2]
 else:
 	description = input("Enter a short description: ")
-
-coreVersion = defaultCoreVersion
-if len(argv) > 3:
-	coreVersion = argv[3]
-else:
-	coreVersion = input("Enter the core version [%s]: " % defaultCoreVersion).strip()
-	if not len(coreVersion):
-		coreVersion = defaultCoreVersion
 
 groupId = "de.cubeisland.engine"
 artifactId = re.sub(r'[^a-z]', '', moduleName.lower())
@@ -60,7 +55,7 @@ commandLine = [
 	"-DarchetypeVersion=%s" % archetypeVersion,
 	"-DgroupId=%s" % groupId,
 	"-DartifactId=%s" % artifactId,
-	"-Dversion=%s" % coreVersion,
+	"-Dversion=%s" % "1.0.0-SNAPSHOT",
 	"-Dpackage=%s.%s" % (groupId, artifactId),
 	"-Ddefault-class=%s" % (artifactId[0].upper() + artifactId[1:]),
 	"-Dname=%s" % moduleName,
