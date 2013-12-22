@@ -12,7 +12,7 @@ def which(program):
 
 archetypeGroupId = "de.cubeisland.maven.archetypes"
 archetypeArtifactId = "archetype-cubeengine-module"
-archetypeVersion = "1.0.2"
+archetypeVersion = "1.0.3"
 
 if 'ARCHETYPE_VERSION' in os.environ:
 	archetypeVersion = os.environ['ARCHETYPE_VERSION']
@@ -58,6 +58,7 @@ commandLine = [
 	"-Dversion=%s" % "1.0.0-SNAPSHOT",
 	"-Dpackage=%s.%s" % (groupId, artifactId),
 	"-Ddefault-class=%s" % (artifactId[0].upper() + artifactId[1:]),
+	"-DcoreVersion=%s" % coreVersion,
 	"-Dname=%s" % moduleName,
 	"-Ddescription=%s" % description,
 	"-DinteractiveMode=false"
