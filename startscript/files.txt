@@ -1,0 +1,4 @@
+%CE_HOME%\*\target\*-*.jar                                    |   garbage
+%CE_HOME%\*\target\*-*.jar                                    |   garbage2
+%CE_HOME%\cubeengine\target\cubeengine.jar                    |   plugins/CubeEngine.jar
+%CE_HOME%\*\target\*.jar                                      |   plugins/CubeEngine/modules
