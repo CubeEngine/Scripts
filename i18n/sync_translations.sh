@@ -36,11 +36,11 @@ update_repo()
             echo "...done"
             
             echo "Pushing new source files to transifex..."
-            $tx_client push -s
+            $tx_client push -s -f --no-interactive
             echo "...done"
 
             echo "Getting the new catalogs..."
-            $tx_client pull -a
+            $tx_client pull -a -f --skip
             git add **/*.po
             git commit -m "Updated the translations"
             git reset --hard HEAD
