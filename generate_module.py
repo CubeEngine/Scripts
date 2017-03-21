@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from subprocess import call
 from sys import argv
 from urllib import request
@@ -32,10 +34,10 @@ else:
     archetypeVersion = find_latest_version_of(archetypeGroupId, archetypeArtifactId, "1.0.4")
 
 
-coreVersion = "1.0.0-SNAPSHOT"
+libVersion = "1.0.0-SNAPSHOT"
 
-if 'CORE_VERSION' in os.environ:
-    coreVersion = os.environ['CORE_VERSION']
+if 'LIB_VERSION' in os.environ:
+    libVersion = os.environ['LIB_VERSION']
 
 moduleName = ""
 if len(argv) > 1:
@@ -49,7 +51,7 @@ if len(argv) > 2:
 else:
     description = input("Enter a short description: ")
 
-groupId = "de.cubeisland.engine.module"
+groupId = "org.cubeengine.module"
 artifactId = re.sub(r'[^a-z]', '', moduleName.lower())
 
 maven = "mvn"
@@ -59,7 +61,7 @@ if os.pathsep == ";":
 if 'PARENT_VERSION' in os.environ:
     parentVersion = os.environ['PARENT_VERSION']
 else:
-    parentVersion = find_latest_version_of(groupId, "parent", "1")
+    parentVersion = find_latest_version_of("org.cubeengine", "parent", "2")
 
 maven = which(maven)
 
