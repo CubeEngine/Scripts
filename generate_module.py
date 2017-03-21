@@ -25,13 +25,13 @@ def find_latest_version_of(group_id, artifact_id, default=""):
     return match.group(1)
 
 
-archetypeGroupId = "de.cubeisland.maven.archetypes"
+archetypeGroupId = "org.cubeengine.maven.archetypes"
 archetypeArtifactId = "archetype-cubeengine-module"
 
 if 'ARCHETYPE_VERSION' in os.environ:
     archetypeVersion = os.environ['ARCHETYPE_VERSION']
 else:
-    archetypeVersion = find_latest_version_of(archetypeGroupId, archetypeArtifactId, "1.0.4")
+    archetypeVersion = find_latest_version_of(archetypeGroupId, archetypeArtifactId, "2.0.0")
 
 
 libVersion = "1.0.0-SNAPSHOT"
@@ -81,7 +81,7 @@ commandLine = [
     "-Dpackage=%s.%s" % (groupId, artifactId),
     "-Ddefault-class=%s" % (artifactId[0].upper() + artifactId[1:]),
     "-DparentVersion=%s" % parentVersion,
-    "-DcoreVersion=%s" % coreVersion,
+    "-DlibVersion=%s" % libVersion,
     "-Dname=%s" % moduleName,
     "-Ddescription=%s" % description,
     "-DinteractiveMode=false"
