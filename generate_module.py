@@ -34,22 +34,35 @@ else:
     archetypeVersion = find_latest_version_of(archetypeGroupId, archetypeArtifactId, "2.0.0")
 
 
-libVersion = "1.0.0-SNAPSHOT"
+libVersion = ""
+if len(argv) > 1:
+    libVersion = argv[1]
+else:
+    libVersion = input("Enter the libcube version: ")
 
-if 'LIB_VERSION' in os.environ:
-    libVersion = os.environ['LIB_VERSION']
+spongeVersion = ""
+if len(argv) > 2:
+    spongeVersion = argv[2]
+else:
+    spongeVersion = input("Enter the SpongeAPI version: ")
 
 moduleName = ""
-if len(argv) > 1:
-    moduleName = argv[1]
+if len(argv) > 3:
+    moduleName = argv[3]
 else:
     moduleName = input("Enter the module name: ")
 
 description = ""
-if len(argv) > 2:
-    description = argv[2]
+if len(argv) > 4:
+    description = argv[4]
 else:
     description = input("Enter a short description: ")
+
+repo = ""
+if len(argv) > 5:
+    repo = argv[5]
+else:
+    repo = input("Enter the SCM repo name (https://github.com/CubeEngine/<THIS>): ")
 
 groupId = "org.cubeengine.module"
 artifactId = re.sub(r'[^a-z]', '', moduleName.lower())
@@ -82,6 +95,8 @@ commandLine = [
     "-Ddefault-class=%s" % (artifactId[0].upper() + artifactId[1:]),
     "-DparentVersion=%s" % parentVersion,
     "-DlibVersion=%s" % libVersion,
+    "-DspongeVersion=%s" % spongeVersion,
+    "-Drepo=%s" % repo,
     "-Dname=%s" % moduleName,
     "-Ddescription=%s" % description,
     "-DinteractiveMode=false"
