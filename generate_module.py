@@ -74,7 +74,7 @@ if os.pathsep == ";":
 if 'PARENT_VERSION' in os.environ:
     parentVersion = os.environ['PARENT_VERSION']
 else:
-    parentVersion = find_latest_version_of("org.cubeengine", "parent", "2")
+    parentVersion = find_latest_version_of("org.cubeengine.module", "parent", "1")
 
 maven = which(maven)
 
