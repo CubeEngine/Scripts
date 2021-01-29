@@ -1,0 +1,368 @@
+#!/bin/bash
+
+# !!! Managed by puppet !!!
+# Do not edit directly !
+
+here="$(dirname "$(readlink -f "$0")")"
+
+base_forge_url='http://files.minecraftforge.net/maven'
+promo_file='promotions_slim.json'
+forge_package='net/minecraftforge/forge'
+base_vanilla_url='https://repo.spongepowered.org/maven'
+
+
+
+#########################
+# Version Defaults Configuration #
+#########################
+mc_version='1.12.2'
+sponge_type=bleeding
+#sponge_type=stable
+sponge_api_version='7.0.0-SNAPSHOT'
+java_args=(-Xms3G -Xmx4G -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:25566,server=y,suspend=n)
+################
+# Sponge-Forge #
+################
+run_forge=true
+spongeforge_dl_api_url="https://dl-api.spongepowered.org/v1/org.spongepowered/spongeforge/downloads?type=${sponge_type}&minecraft=${mc_version}"
+forge_build='2489'
+forge_version_base='14.23.0'
+sp_forge_build='2653'
+##################
+# Sponge-Vanilla #
+##################
+run_vanilla=false
+spongevanilla_dl_api_url="https://dl-api.spongepowered.org/v1/org.spongepowered/spongevanilla/downloads?type=${sponge_type}&minecraft=${mc_version}"
+sp_vanilla_build='290'
+###################################
+
+
+###################################
+# CubeEngine Update Configuration #
+###################################
+
+# multiverse
+modules=(LibCube conomy kickban teleport worlds travel locker portals vanillaplus roles chat powertools vigil controlc kits selector worldcontrol signmarket bigdata vote protector elevator namehistory writer chopchop itemrepair shout hide fun backpack itemduct)
+
+server_dir="${here}/server"
+server_jar="${server_dir}/server.jar"
+server_conf="${server_dir}/server.properties"
+server_password="************"
+install_dir="${here}/install"
+cubeengine_dir="${here}/CubeEngine"
+mods_dir="${server_dir}/mods"
+pid_file="${server_dir}/PID"
+run_script="${server_dir}/run.sh"
+stop_indicator="${server_dir}/stop"
+session_name="$(hostname -s)_$(whoami)"
+
+
+##
+# END OF CONFIGURATION
+##
+
+conf_override="${here}/mc.config"
+if [[ -r "$conf_override" ]]
+then
+    source "$conf_override"
+fi
+
+# Build Version Strings
+if $run_forge ; then
+    sponge_version="${mc_version}-${forge_build}-${sponge_api_version}-${sp_forge_build}" 
+    sponge_package='org/spongepowered/spongeforge'    
+elif $run_vanilla ; then
+    sponge_version="${mc_version}-${sponge_api_version}-${sp_vanilla_build}"
+    sponge_package='org/spongepowered/spongevanilla'
+else
+    echo "Unsure what Server to run. Choose Forge or Vanilla" 
+    exit 1
+fi 
+
+forge_version="${mc_version}-${forge_version_base}.${forge_build}"
+
+update_forge() {
+    
+    if $run_vanilla ; then
+        echo "Vanilla needs only needs to update Sponge"
+        exit 1
+    fi
+
+    echo "Download and install Forge-Server"
+    echo "Forge Version: ${forge_version}"
+
+    dlurl="${base_forge_url}/${forge_package}/${forge_version}/forge-${forge_version}-installer.jar"
+    echo "Download from: ${dlurl}"
+
+    pushd "${here}/install"
+        temp_install="$(mktemp)"
+        wget "$dlurl" -O "$temp_install"
+        java -jar "$temp_install" --installServer
+        rm "$temp_install"* # remove installed, not needed anymore (save to delete)
+        rm *.log            # remove logs (Protip: not the entire directory including this script)
+    popd
+
+    cp -v -R "${install_dir}/." "$server_dir"
+    mv -v "${server_dir}/forge-${forge_version}-universal.jar" "${server_jar}"
+
+    # pssst i am evil
+    echo "eula=true" > "${server_dir}/eula.txt"
+}
+
+update_sponge() {
+    
+    if $run_forge ; then
+        echo "Download and install SpongeForge Mod"
+        echo "SpongeForge Version: ${sponge_version}"
+
+        mods_dir="${here}/server/mods"
+        mkdir -p "$mods_dir"
+        target_sponge="${mods_dir}/sponge.jar"
+        versionInfo="$(curl --silent ${spongeforge_dl_api_url})"
+
+    elif $runvanilla ; then
+        echo "Download and install SpongeVanilla"
+
+        target_sponge="${mods_dir}/sponge.jar"      
+        versionInfo="$(curl --silent ${spongevanilla_dl_api_url})"
+
+    else
+        exit 1
+    fi
+    
+    url="$(echo ${versionInfo} | grep -oP 'https://[^"]+' | head -n 1)"
+    this_version="$(echo ${versionInfo} | grep -oP '("version":")\K(.+?)(?=")' | head -n 1)"
+    last_api_version="$(echo ${versionInfo} | grep -oP '("spongeapi":")\K([0-9]+\.[0-9]+\.[0-9]+(-[A-Z]+)?)(?=-[0-9a-f]+")' | head -n 1)"
+    echo "Latest Version is: ${this_version} with API ${last_api_version}"
+    if [ "${last_api_version}" == "${sponge_api_version}" ] 
+    then
+        wget --quiet "${url}" -O "${target_sponge}"
+    else
+        echo "Latest API Version differs! Expected: ${sponge_api_version} | Got: ${last_api_version}"
+        exit 1
+    fi
+}
+
+update_cubeengine() {
+    echo "Updating CubeEngine..."   
+
+    for module in "${modules[@]}"
+    do
+        update_module $module
+    done
+    echo "done updating!"
+}
+
+update_module() {
+    moduleName="$1"
+    printf "%20s  |  Stand: %s\n" "${moduleName}.jar" "$(date -d @$(stat -c %Y ${cubeengine_dir}/${moduleName}.jar) '+%Y-%m-%d %H:%M:%S')"
+    mv "${cubeengine_dir}/${moduleName}"-*-full.jar "${cubeengine_dir}/${moduleName}.jar" 2> /dev/null 
+    cp -u -p "${cubeengine_dir}/${moduleName}.jar" "${mods_dir}/${moduleName}.jar"
+
+}
+
+server_run() {
+    while true
+    do
+        sed -i "s/enable-rcon=false/enable-rcon=true/" "$server_conf"
+        if grep -i 'rcon.password=' "$server_conf"
+        then
+            sed "s/rcon.password=.*$/rcon.password=${server_password}/" "$server_conf"
+        else
+            echo "rcon.password=${server_password}" >> "$server_conf"
+        fi
+        echo "Lets do this!"
+        pushd "$server_dir"
+            java "${java_args[@]}" -jar "${server_jar}"
+        popd
+
+        if [[ -e "$stop_indicator" ]]
+        then
+            echo "It is all over now!"
+            return 0
+        fi
+
+        echo "Is it over already? Wanna go again?"
+        echo "Or you'd rather CRTL-C out?"
+        sleep 5
+    done
+}
+
+server_start() {
+    
+    if server_status
+    then
+        echo "Already running... $0 view or tmux a -t \"$session_name\""
+        return 0
+    fi
+
+    rm -f "$stop_indicator"
+    myself="$(readlink -f "$0")"
+    
+    echo "Starting a whole new world. Just for you."
+    tmux new -d -c "$server_dir" -n "$session_name" -s "$session_name" "$myself run"
+
+    sleep 1 # wait for java to open the jar
+    pid=$(lsof -Fp "$server_jar" | grep '^p')
+    pid=${pid#p}
+    pid=$(ps -o ppid= $pid)
+    echo $pid
+
+    if ( ! kill -0 $pid 2> /dev/null )
+    then
+        echo " * But nobody came."
+        return 1
+    fi
+
+    echo $pid > "$pid_file"
+}
+
+server_stop() {
+    if ! server_status
+    then
+        return 1
+    fi
+    
+    echo "Just lay down your weapon, and..."
+    echo "well, my job will be a lot easier."
+
+    net_interface="$(hostname -i)"
+    
+    mcrcon -H "$net_interface" -p "$server_password" -c stop
+    if ! [[ $? == 1 ]]
+    then
+        echo "Failed to send rcon stop command."
+        return 1
+    fi
+
+    if [[ ! -e "$stop_indicator" ]]
+    then
+        touch "$stop_indicator"
+    fi
+
+    pid=$(cat "$pid_file")
+    c=1
+    while [ "$c" -le 300 ]
+    do
+        if (kill -0 $pid 2> /dev/null )
+        then
+            echo -n "."
+            sleep 2
+        else
+            break
+        fi
+        c=$((++c))
+    done
+    
+    if ( kill -0 $pid 2> /dev/null ) # dead already?
+    then
+        echo "Welp, it was worth a shot."
+        echo "Guess you like doing things the hard way, huh?"
+        kill -KILL $pid
+        echo "Geeetttttt dunked on!"
+    fi
+    rm -f "$pid_file"
+}
+
+server_status() {
+    if [[ -e "$pid_file" ]]
+    then
+        if ( kill -0 $(cat "$pid_file") 2> /dev/null )
+        then
+            echo "Still alive. I'm eating cake and i'm still alive."
+            return 0
+        else
+            echo "Server seems to have died"
+            rm -f "$pid_file"
+            return 1
+        fi
+    else 
+        echo " * But nobody came. (PID is missing)"
+        return 1
+    fi
+}
+
+server_view() {
+    echo "Let's take a look together..."
+
+    if server_status
+    then
+        tmux attach -t "$session_name"
+    fi
+}
+
+find_playerdata() {
+    if [[ "$#" = 0 ]]
+    then
+        echo "Missing player name!"
+        return 1
+    fi
+    echo -n "Searching..."
+    local file="$(zgrep -il "$1" "${server_dir}/world/playerdata/"*.dat)"
+    if [[ $? = 0 ]]
+    then
+        echo "Found: ${file}"
+        return 0
+    else
+        echo "Failed!"
+        return 2
+    fi
+        
+}
+
+cmd="$1"
+shift
+case "$cmd" in
+    update)
+        sub="$1"
+        shift
+        case "$sub" in
+            forge)
+                update_forge
+                ;;
+            sponge)
+                update_sponge
+                ;;
+            cubeengine|ce)
+                update_cubeengine
+                ;;
+            all)
+                if $run_forge ; then
+                    update_forge
+                fi
+                update_sponge
+                update_cubeengine
+                ;;
+            *)
+                echo "You updated:"
+        esac
+        ;;
+    run)
+        server_run
+        ;;
+    start)
+        server_start
+        ;;
+    startview|sv)
+        server_start && server_view
+        ;;
+    stop)
+        server_stop
+        ;;
+    status)
+        server_status
+        ;;
+    view|v)
+        server_view
+        ;;
+    playerdata|pd)
+        find_playerdata "$@"
+        ;;
+    *)
+        echo "You failed!"
+        exit 1
+
+esac
+
+exit $?
+
